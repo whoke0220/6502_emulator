@@ -17,7 +17,7 @@ struct Mem {
 	}
 
 	/** read 1 byte */
-	Byte operator[](u32 Address) {
+	Byte operator[](u32 Address) const {
 		//asset here Address is < MAX_MEM 
 		return Data[Address];
 	}
@@ -59,9 +59,21 @@ struct CPU {
 		return Data;
 	}
 
-	//opcaodes
+	Byte ReadByte(u32& Cycles, Byte Address, Mem& memory) {
+		Byte Data = memory[Address];
+		Cycles--;
+		return Data;
+	}
+
+	//opcodes
 	static constexpr Byte
 		INS_LDA_IM = 0xA9;
+		INS_LDA_ZP = 0xA5; 
+
+	void LDASetStatus() {
+			Z = (A == 0);
+			N = (A & 0b10000000) > 0;
+	}
 
 	void Execute(u32 Cycles, Mem& memory) {
 		while (Cycles > 0) {
@@ -71,8 +83,13 @@ struct CPU {
 					Byte value =
 						FetchByte(Cycles, memory);
 					A = value;
-					Z = (A == 0);
-					N = (A & 0b10000000) > 0;
+					LDASetStatus();
+				}break;
+				case INS_LDA_ZP: {
+					Byte ZeroPageAddress =
+						FetchByte(Cycles, memory);
+					A = ReadByte(Cycles, ZeroPageAddress, memory);
+					LDASetStatus();
 				}break;
 				default: {
 					printf("Instruction not handled %d", Instruction);
